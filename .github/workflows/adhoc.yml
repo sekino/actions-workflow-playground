@@ -12,7 +12,7 @@ jobs:
   create-tf-execute-context:
     runs-on: ubuntu-22.04
     env:
-      LABELS: ${{ (github.event.issue.labels && toJson(github.event.issue.labels) || (github.event.pull_request.labels && toJson(github.event.pull_request.labels) }}
+      LABELS: ${{ (github.event.issue.labels && toJson(github.event.issue.labels) || (github.event.pull_request.labels && toJson(github.event.pull_request.labels)) }}
     steps:
       - name: Create context from labels
         id: from-labels
