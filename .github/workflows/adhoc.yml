@@ -42,7 +42,7 @@ jobs:
           echo "destroy=${destroy}" >> $GITHUB_OUTPUT
 
   call-plan:
-    if: ${{ github.event.issue.pull_request }} && ${{ github.event.comment.body == 'plan' }}
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Call plan workflow
