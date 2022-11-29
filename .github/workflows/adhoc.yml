@@ -42,6 +42,7 @@ jobs:
           echo "destroy=${destroy}" >> $GITHUB_OUTPUT
 
   call-plan:
+    needs: create-tf-execute-context
     if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' }}
     runs-on: ubuntu-22.04
     steps:
@@ -49,6 +50,7 @@ jobs:
         run: echo "Call plan workflow"
 
   call-apply:
+    needs: create-tf-execute-context
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-22.04
     steps:
