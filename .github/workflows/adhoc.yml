@@ -43,12 +43,14 @@ jobs:
 
   call-plan:
     if: ${{ github.event.issue.pull_request }} && ${{ github.event.comment.body == 'plan' }}
+    runs-on: ubuntu-22.04
     steps:
       - name: Call plan workflow
         run: echo "Call plan workflow"
 
   call-apply:
     if: github.event.pull_request.merged == true
+    runs-on: ubuntu-22.04
     steps:
       - name: Call plan workflow
         run: echo "Call apply workflow"
