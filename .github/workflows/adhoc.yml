@@ -9,16 +9,50 @@ on:
     types: [closed]
 
 jobs:
-  create-tf-execute-context-when-plan-comment:
-    if: ${{ github.event.issue.pull_request }} && ${{ github.event.comment.body == 'plan' }}
+  create-tf-execute-context:
     runs-on: ubuntu-22.04
     env:
       LABELS: ${{ toJson(github.event.issue.labels) }}
     steps:
-      - name: Create targets
+      - name: Create context from labels
+        id: from-labels
         run: |
-          target_labels=$(echo ${LABELS} | jq '.labels[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
-          env_labels=$(echo ${LABELS} | jq '.labels[].name' | jq 'select(. | startswith("env:"))' | jq -c -s '.')
+          target_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
+          targets=$(echo ${target_labels} | sed 's/target://g')
+          env_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("env:"))' | jq -c -s '.')
+          envs=$(echo ${env_labels} | sed 's/env://g')
+          env_num=$(echo ${envs} | jq '. | length')
+          if [[ ${env_num} == 0 ]]; then
+            echo "env label is not set" >&2
+            exit 1
+          fi
+          if [[ ${env_num} != 1 ]]; then
+            echo "two or more env labels are set" >&2
+            exit 1
+          fi
+          env=$(echo ${envs} | jq -cr '.[]')
+          destroy=$(echo ${LABELS} | jq '.[].name' | jq 'select(.=="destroy")' | jq -cr '.')
           
-          echo ${target_labels}
-          echo ${env_labels}
+          echo "targets: ${targets}"
+          echo "env: ${env}"
+          echo "destroy: ${destroy}"
+          
+          echo "targets=${targets}" >> $GITHUB_OUTPUT
+          echo "env=${env}" >> $GITHUB_OUTPUT
+          echo "destroy=${destroy}" >> $GITHUB_OUTPUT
+
+  call-plan:
+    needs: create-tf-execute-context
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Call plan workflow
+        run: echo "Call plan workflow"
+
+  call-apply:
+    needs: create-tf-execute-context
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Call plan workflow
+        run: echo "Call apply workflow"
