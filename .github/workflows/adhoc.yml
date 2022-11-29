@@ -33,6 +33,6 @@ jobs:
           echo "destroy=${destroy}" >> $GITHUB_OUTPUT
 
       - name: hoge
-        if: ${{ steps.get-targets.outcome == 'success' && steps.get-targets.outputs != '[]'}}
+        if: ${{ steps.get-targets.outcome == 'success' && steps.get-targets.outputs.targets != '[]'}}
         run: |
           echo "hoge"
