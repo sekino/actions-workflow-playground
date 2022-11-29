@@ -1,0 +1,20 @@
+name: adhoc terraform execute
+
+on:
+  issue_comment:
+    types: [ created ]
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  create-tf-execute-context-when-plan-comment:
+    if: ${{ github.event.issue.pull_request }} && ${{ github.event.comment.body == 'plan' }}
+    runs-on: ubuntu-22.04
+    env:
+      LABELS: ${{ toJson(github.event.issue.labels) }}
+    steps:
+      - name: Create targets
+        run: |
+          echo ${LABELS} | jq . 
