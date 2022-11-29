@@ -19,6 +19,11 @@ jobs:
         run: |
           target_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
           env_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("env:"))' | jq -c -s '.')
+          targets=$(echo ${target_labels} | sed 's/target://g')
+          envs=$(echo ${env_labels} | sed 's/env://g')
+          echo "targets: ${targets}"
+          echo "envs: ${envs}"
           
-          echo ${target_labels}
-          echo ${env_labels}
+          echo "TARGETS=${targets}" >> $GITHUB_OUTPUT
+          echo "envs=${envs}" >> $GITHUB_OUTPUT
+          
