@@ -17,4 +17,8 @@ jobs:
     steps:
       - name: Create targets
         run: |
-          echo ${LABELS} | jq . 
+          target_labels=$(echo ${LABELS} | jq '.labels[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
+          env_labels=$(echo ${LABELS} | jq '.labels[].name' | jq 'select(. | startswith("env:"))' | jq -c -s '.')
+          
+          echo ${target_labels}
+          echo ${env_labels}
