@@ -26,7 +26,7 @@ jobs:
           
           echo "targets: ${targets}"
           echo "envs: ${envs}"
-          echo "destroy: ${          destroy}"
+          echo "destroy: ${destroy}"
           
           echo "targets=${targets}" >> $GITHUB_OUTPUT
           echo "envs=${envs}" >> $GITHUB_OUTPUT
