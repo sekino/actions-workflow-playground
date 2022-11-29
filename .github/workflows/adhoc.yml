@@ -15,15 +15,24 @@ jobs:
     env:
       LABELS: ${{ toJson(github.event.issue.labels) }}
     steps:
-      - name: Create targets
+      - name: Get targets and envs
+        id: get-targets
         run: |
           target_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
-          env_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("env:"))' | jq -c -s '.')
           targets=$(echo ${target_labels} | sed 's/target://g')
+          env_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("env:"))' | jq -c -s '.')
           envs=$(echo ${env_labels} | sed 's/env://g')
+          destroy=$(echo ${LABELS} | jq '.[].name' | jq 'select(.=="destroy")' | jq -c '.')
+          
           echo "targets: ${targets}"
           echo "envs: ${envs}"
+          echo "destroy: ${          destroy}"
           
-          echo "TARGETS=${targets}" >> $GITHUB_OUTPUT
+          echo "targets=${targets}" >> $GITHUB_OUTPUT
           echo "envs=${envs}" >> $GITHUB_OUTPUT
-          
+          echo "destroy=${destroy}" >> $GITHUB_OUTPUT
+
+      - name: hoge
+        if: ${{ steps.get-targets.outcome == 'success' && steps.get-targets.outputs != '[]'}}
+        run: |
+          echo "hoge"
