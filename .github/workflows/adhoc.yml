@@ -23,7 +23,7 @@ jobs:
         run: |
           target_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
           targets=$(echo ${target_labels} | sed 's/target://g')
-          env_labels=$(echo ${LABELS} | jq '.[]' | jq "select(.id == ${DEV_ENV_LABEL_ID} or .id == ${STG_ENV_LABEL_ID})" | jq -c -s '.name')
+          env_labels=$(echo ${LABELS} | jq '.[]' | jq "select(.id == ${DEV_ENV_LABEL_ID} or .id == ${STG_ENV_LABEL_ID}) | .name" | jq -c -s '.')
           envs=$(echo ${env_labels} | sed 's/env://g')
           env_num=$(echo ${envs} | jq '. | length')
           if [[ ${env_num} == 0 ]]; then
