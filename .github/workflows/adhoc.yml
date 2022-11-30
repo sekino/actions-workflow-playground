@@ -57,7 +57,7 @@ jobs:
 
   call-plan:
     needs: create-tf-execute-context
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' && needs.create-tf-execute-context.outputs.targets != '[]' }}
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' && needs.create-tf-execute-context.outputs.targets && needs.create-tf-execute-context.outputs.targets != '[]' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Call plan workflow
@@ -65,7 +65,7 @@ jobs:
 
   call-apply:
     needs: create-tf-execute-context
-    if: ${{ github.event.pull_request.merged == true && needs.create-tf-execute-context.outputs.targets != '[]' }}
+    if: ${{ github.event.pull_request.merged == true && needs.create-tf-execute-context.outputs.targets && needs.create-tf-execute-context.outputs.targets != '[]' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Call plan workflow
