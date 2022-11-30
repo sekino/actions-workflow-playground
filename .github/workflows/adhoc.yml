@@ -23,6 +23,12 @@ jobs:
         run: |
           target_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
           targets=$(echo ${target_labels} | sed 's/target://g')
+          target_num=$(echo ${targets} | jq '. | length')
+          if [[ ${target_num} == 0 ]]; then
+            echo "targets is empty"
+            exit 0
+          fi
+          
           env_labels=$(echo ${LABELS} | jq '.[]' | jq "select(.id == ${DEV_ENV_LABEL_ID} or .id == ${STG_ENV_LABEL_ID}) | .name" | jq -c -s '.')
           envs=$(echo ${env_labels} | sed 's/env://g')
           env_num=$(echo ${envs} | jq '. | length')
@@ -44,10 +50,14 @@ jobs:
           echo "targets=${targets}" >> $GITHUB_OUTPUT
           echo "env=${env}" >> $GITHUB_OUTPUT
           echo "destroy=${destroy}" >> $GITHUB_OUTPUT
+    outputs:
+      targets: ${{ steps.from-labels.outputs.targets }}
+      env: ${{ steps.from-labels.outputs.env }}
+      destroy: ${{ steps.from-labels.outputs.destroy }}
 
   call-plan:
     needs: create-tf-execute-context
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' }}
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' && needs.create-tf-execute-context.outputs.targets != '[]' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Call plan workflow
@@ -55,7 +65,7 @@ jobs:
 
   call-apply:
     needs: create-tf-execute-context
-    if: github.event.pull_request.merged == true
+    if: ${{ github.event.pull_request.merged == true && needs.create-tf-execute-context.outputs.targets != '[]' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Call plan workflow
