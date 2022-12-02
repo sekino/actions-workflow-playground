@@ -45,9 +45,9 @@ jobs:
           context_array=()
           for target_line in "${target_lines}"; do
             echo ${target_line}
-            mode="$(echo ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
-            target_path="$(echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g")"
-            context_array+=("{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }")
+            echo ${target_line} | cut -d ' ' -f1 | tr -d ' '
+            echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g"
+#            context_array+=("{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }")
           done
           context_json=$(path_list=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}"))
 
