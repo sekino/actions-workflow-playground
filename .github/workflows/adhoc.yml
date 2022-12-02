@@ -65,6 +65,7 @@ jobs:
       matrix:
         context: ${{ fromJson(needs.create-context-plan.outputs.context) }}
     if: ${{ needs.create-context-plan.outputs.context }}
+    runs-on: ubuntu-22.04
     steps:
       - name: demo
         run: |
