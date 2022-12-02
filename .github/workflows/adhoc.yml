@@ -20,42 +20,41 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Create context
+        shell: bash {0}
         id: create-context
         run: |
-          echo -n "${{ github.event.comment.body }}" | grep 'target'
+          target_lines=$(echo -n "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
+          target_env=$(echo -n "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
+          
+          target_line_num=$(echo -n ${target_lines} | wc -l | tr -d ' ')
+          if [[ "${target_line_num}" == "0" ]]; then
+            echo "targets is empty"
+            exit 0
+          fi
+          
+          target_env_num=$(echo -n ${target_env} | wc -l | tr -d ' ')
+          if [[ "${target_env_num}" == "0" ]]; then
+            echo "cannot find env in target" >&2
+            exit 1
+          fi
+          if [[ "${target_env_num}" != "1" ]]; then
+            echo "two or more env in target" >&2
+            exit 1
+          fi
 
-#          target_lines=$(echo -n "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
-#          target_env=$(echo -n "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
-          
-#          target_line_num=$(echo -n ${target_lines} | wc -l | tr -d ' ')
-#          if [[ "${target_line_num}" == "0" ]]; then
-#            echo "targets is empty"
-#            exit 0
-#          fi
-          
-#          target_env_num=$(echo -n ${target_env} | wc -l | tr -d ' ')
-#          if [[ "${target_env_num}" == "0" ]]; then
-#            echo "cannot find env in target" >&2
-#            exit 1
-#          fi
-#          if [[ "${target_env_num}" != "1" ]]; then
-#            echo "two or more env in target" >&2
-#            exit 1
-#          fi
-#
-#          context_array=() // { "target_path": <path>, "mode": <mode> } というフォーマットの文字列の配列
-#          for target_line in ${target_lines}; do
-#            mode="$(echo -n ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
-#            target_path="$(echo -n ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g")"
-#            context_array+=("{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }")
-#          done
-#          context_json=$(path_list=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}"))
-#
-#          echo "target_env: ${target_env}"
-#          echo "target_lines: ${target_lines}"
-#
-#          echo "contexts=${context_json}" >> $GITHUB_OUTPUT
-#          echo "env=${target_env}" >> $GITHUB_OUTPUT
+          context_array=() // { "target_path": <path>, "mode": <mode> } というフォーマットの文字列の配列
+          for target_line in ${target_lines}; do
+            mode="$(echo -n ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
+            target_path="$(echo -n ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g")"
+            context_array+=("{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }")
+          done
+          context_json=$(path_list=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}"))
+
+          echo "target_env: ${target_env}"
+          echo "target_lines: ${target_lines}"
+
+          echo "contexts=${context_json}" >> $GITHUB_OUTPUT
+          echo "env=${target_env}" >> $GITHUB_OUTPUT
     outputs:
       contexts: ${{ steps.create-context.outputs.contexts }}
       env: ${{ steps.create-context.outputs.env }}
