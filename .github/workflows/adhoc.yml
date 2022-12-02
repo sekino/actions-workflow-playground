@@ -22,7 +22,7 @@ jobs:
       - name: Create context
         id: create-context
         run: |
-          echo -n "${{ github.event.comment.body }}" | grep 'plan|plan-destroy'
+          echo -n "${{ github.event.comment.body }}" | grep 'target'
 
 #          target_lines=$(echo -n "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
 #          target_env=$(echo -n "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
