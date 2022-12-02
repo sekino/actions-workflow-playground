@@ -26,18 +26,18 @@ jobs:
           target_lines=$(echo "${{ github.event.comment.body }}" | egrep -w 'plan|plan-destroy')
           target_env=$(echo "${target_lines}" | egrep -ow 'dev|stg|prd|sbg' | sort | uniq)
           
-          target_line_num=$(echo ${target_lines} | wc -l)
-          if [[ ${target_line_num} == 0 ]]; then
+          target_line_num=$(echo ${target_lines} | wc -l | tr -d ' ')
+          if [[ "${target_line_num}" == "0" ]]; then
             echo "targets is empty"
             exit 0
           fi
           
-          target_env_num=$(echo ${target_env} | wc -l)
-          if [[ ${target_env_num} == 0 ]]; then
+          target_env_num=$(echo ${target_env} | wc -l | tr -d ' ')
+          if [[ "${target_env_num}" == "0" ]]; then
             echo "cannot find env in target" >&2
             exit 1
           fi
-          if [[ ${target_env_num} != 1 ]]; then
+          if [[ "${target_env_num}" != "1" ]]; then
             echo "two or more env in target" >&2
             exit 1
           fi
