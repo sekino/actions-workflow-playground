@@ -80,8 +80,7 @@ jobs:
             
             // 最新のtargetコメントを使用する
             const targetComment = comments.find(comment => {
-              console.log(comment)
-              comment.body.startsWith("/target")
+              return comment.body.startsWith("/target")
             })
             
             if (targetComment) return targetComment.body
