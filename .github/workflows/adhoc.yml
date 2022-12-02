@@ -83,7 +83,7 @@ jobs:
               comment.body.startsWith("/target")
             })
             
-            return targetComment.body
+            return targetComment
 
       - name: Create context
         shell: bash {0}
