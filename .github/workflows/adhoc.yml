@@ -71,8 +71,8 @@ jobs:
     needs: create-context-plan
     strategy:
       matrix:
-        context: ${{ fromJson(needs.create-context-plan.outputs.context) }}
-    if: ${{ needs.create-context-plan.outputs.context }}
+        context: ${{ fromJson(needs.create-context-plan.outputs.contexts) }}
+    if: ${{ needs.create-context-plan.outputs.contexts }}
     runs-on: ubuntu-22.04
     steps:
       - name: demo
