@@ -9,64 +9,86 @@ on:
     types: [closed]
 
 env:
-  DEV_ENV_LABEL_ID: 4853293684
-  STG_ENV_LABEL_ID: 4851956905
+  PLAN_ROLE_MAP: '{ "dev": "role/terraformPlan", "stg": "role/terraformPlan" }'
+  APPLY_ROLE_MAP: '{ "dev": "role/terraformApply", "stg": "role/terraformApply" }'
+  # bitwarden: Mongo Atlas API Key terraform
+  ATLAS_API_KEY_ID_MAP: '{ "dev": "123456", "stg": "78910" }'
 
 jobs:
-  create-tf-execute-context:
+  create-context-plan:
+    if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/target') }}
     runs-on: ubuntu-22.04
-    env:
-      LABELS: ${{ (github.event.issue.labels && toJson(github.event.issue.labels)) || (github.event.pull_request.labels && toJson(github.event.pull_request.labels)) }}
     steps:
-      - name: Create context from labels
-        id: from-labels
+      - name: Create context
+        id: create-context
         run: |
-          target_labels=$(echo ${LABELS} | jq '.[].name' | jq 'select(. | startswith("target:"))' | jq -c -s '.')
-          targets=$(echo ${target_labels} | sed 's/target://g')
-          target_num=$(echo ${targets} | jq '. | length')
-          if [[ ${target_num} == 0 ]]; then
+          
+          target_lines=$(echo "${{ github.event.comment.body }}" | egrep -w 'plan|plan-destroy')
+          target_env=$(echo "${target_lines}" | egrep -ow 'dev|stg|prd|sbg' | sort | uniq)
+          
+          target_line_num=$(echo ${target_lines} | wc -l)
+          if [[ ${target_line_num} == 0 ]]; then
             echo "targets is empty"
             exit 0
           fi
           
-          env_labels=$(echo ${LABELS} | jq '.[]' | jq "select(.id == ${DEV_ENV_LABEL_ID} or .id == ${STG_ENV_LABEL_ID}) | .name" | jq -c -s '.')
-          envs=$(echo ${env_labels} | sed 's/env://g')
-          env_num=$(echo ${envs} | jq '. | length')
-          if [[ ${env_num} == 0 ]]; then
-            echo "env label is not set" >&2
+          target_env_num=$(echo ${target_env} | wc -l)
+          if [[ ${target_env_num} == 0 ]]; then
+            echo "cannot find env in target" >&2
             exit 1
           fi
-          if [[ ${env_num} != 1 ]]; then
-            echo "two or more env labels are set" >&2
+          if [[ ${target_env_num} != 1 ]]; then
+            echo "two or more env in target" >&2
             exit 1
           fi
-          env=$(echo ${envs} | jq -cr '.[]')
-          destroy=$(echo ${LABELS} | jq '.[].name' | jq 'select(.=="destroy")' | jq -cr '.')
           
-          echo "targets: ${targets}"
-          echo "env: ${env}"
-          echo "destroy: ${destroy}"
+          context_array=() // { "target_path": <path>, "mode": <mode> } というフォーマットの文字列の配列
+          for target_line in ${target_lines}; do
+            mode="$(echo ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
+            target_path="$(echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g")"
+            context_array+=("{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }")
+          done
+          context_json=$(path_list=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}"))
           
-          echo "targets=${targets}" >> $GITHUB_OUTPUT
-          echo "env=${env}" >> $GITHUB_OUTPUT
-          echo "destroy=${destroy}" >> $GITHUB_OUTPUT
+          echo "target_env: ${target_env}"
+          echo "target_lines: ${target_lines}"
+          
+          echo "contexts=${context_json}" >> $GITHUB_OUTPUT
+          echo "env=${target_env}" >> $GITHUB_OUTPUT
     outputs:
-      targets: ${{ steps.from-labels.outputs.targets }}
-      env: ${{ steps.from-labels.outputs.env }}
-      destroy: ${{ steps.from-labels.outputs.destroy }}
+      contexts: ${{ steps.create-context.outputs.contexts }}
+      env: ${{ steps.create-context.outputs.env }}
 
   call-plan:
-    needs: create-tf-execute-context
-    if: ${{ github.event.issue.pull_request && github.event.comment.body == 'plan' && needs.create-tf-execute-context.outputs.targets && needs.create-tf-execute-context.outputs.targets != '[]' }}
-    runs-on: ubuntu-22.04
+    needs: create-context-plan
+    strategy:
+      matrix:
+        context: ${{ fromJson(needs.create-context-plan.outputs.context) }}
+    if: ${{ needs.create-context-plan.outputs.context }}
     steps:
-      - name: Call plan workflow
-        run: echo "Call plan workflow"
+      - name: demo
+        run: |
+          echo ${target_path}
+          echo ${mode}
+        env:
+          target_path: ${{ matrix.context.target_path }}
+          mode: ${{ matrix.context.mode }}
+          env: ${{ needs.create-context-plan.outputs.env }}
+          role-to-assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context-plan.outputs.env] }}
+          atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context-plan.outputs.env] }}
 
-  call-apply:
-    needs: create-tf-execute-context
-    if: ${{ github.event.pull_request.merged == true && needs.create-tf-execute-context.outputs.targets && needs.create-tf-execute-context.outputs.targets != '[]' }}
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Call plan workflow
-        run: echo "Call apply workflow"
+#  call-apply:
+#    needs: create-tf-execute-context
+#    if: ${{ github.event.pull_request.merged == true && needs.create-tf-execute-context.outputs.targets && needs.create-tf-execute-context.outputs.targets != '[]' }}
+#    strategy:
+#      matrix:
+#        state_dir: ${{fromJson(needs.create-tf-execute-context.outputs.targets)}}
+#    uses: ./.github/workflows/apply.yml
+#    with:
+#      role-to-assume: ${{ fromJson(env.APPLY_ROLE_MAP)[needs.create-tf-execute-context.outputs.env] }}
+#      work-dir: ${{ matrix.state_dir }}
+#      env: ${{ needs.create-tf-execute-context.outputs.env }}
+#      atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-tf-execute-context.outputs.env] }}
+#    secrets:
+#      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+#      MODULE_TOKEN: ${{ secrets.MABOT_TOKEN }}
