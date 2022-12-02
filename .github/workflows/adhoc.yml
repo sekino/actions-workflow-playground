@@ -45,8 +45,14 @@ jobs:
           context_array=()
           while IFS= read -r target_line; do
             echo "line:${target_line}"
-            echo ${target_line} | cut -d ' ' -f1 | tr -d ' '
-            echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g"
+            mode="$(echo ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
+            target_path="$(echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g")"
+            echo "mode:${mode}"
+            echo "target_path:${target_path}"
+          
+            context="{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }"
+            echo "context:${context}"
+            context_array+=(${context})
           done <<< "${target_lines}" 
           context_json=$(path_list=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}"))
 
