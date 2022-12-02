@@ -79,7 +79,7 @@ jobs:
             })
             
             // 最新のtargetコメントを使用する
-            const targetComment = comments.find(comment => {
+            const targetComment = comments.reverse.find(comment => {
               return comment.body.startsWith("/target")
             })
             
