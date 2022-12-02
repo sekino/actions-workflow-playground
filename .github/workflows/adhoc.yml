@@ -23,7 +23,7 @@ jobs:
         shell: bash {0}
         id: create-context
         run: |
-          target_lines=$(echo "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
+          target_lines=$(echo "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy' | sort | uniq)
           target_env=$(echo "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
           
           if [[ -z "${target_lines}" ]]; then
@@ -52,6 +52,7 @@ jobs:
 
           echo "target_env: ${target_env}"
           echo "target_lines: ${target_lines}"
+          echo "contexts: ${context_json}"
 
           echo "contexts=${context_json}" >> $GITHUB_OUTPUT
           echo "env=${target_env}" >> $GITHUB_OUTPUT
