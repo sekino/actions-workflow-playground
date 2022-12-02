@@ -76,11 +76,12 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
+              per_page: 100,
             })
             
             // 最新のtargetコメントを使用する
             const targetComment = comments.reverse().find(comment => {
-              return comment.body.startsWith("/target")
+              return comment.body.startsWith("bbb")
             })
             
             if (targetComment) return targetComment.body
