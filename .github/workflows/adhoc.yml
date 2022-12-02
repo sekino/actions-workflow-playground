@@ -22,14 +22,17 @@ jobs:
       - name: Create context
         id: create-context
         run: |
-          target_lines=$(echo -n "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
-          target_env=$(echo -n "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
+          echo -n "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy'
+          echo -n "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq
+
+#          target_lines=$(echo -n "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
+#          target_env=$(echo -n "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
           
-          target_line_num=$(echo -n ${target_lines} | wc -l | tr -d ' ')
-          if [[ "${target_line_num}" == "0" ]]; then
-            echo "targets is empty"
-            exit 0
-          fi
+#          target_line_num=$(echo -n ${target_lines} | wc -l | tr -d ' ')
+#          if [[ "${target_line_num}" == "0" ]]; then
+#            echo "targets is empty"
+#            exit 0
+#          fi
           
 #          target_env_num=$(echo -n ${target_env} | wc -l | tr -d ' ')
 #          if [[ "${target_env_num}" == "0" ]]; then
