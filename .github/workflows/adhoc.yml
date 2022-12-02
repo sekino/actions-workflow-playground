@@ -43,8 +43,8 @@ jobs:
           fi
 
           context_array=()
-          while IFS= read -r line; do
-            echo "line:${target_line}"
+          while IFS= read -r target_line; do
+            echo "line:${line}"
             echo ${target_line} | cut -d ' ' -f1 | tr -d ' '
             echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g"
           done <<< "${target_lines}" 
