@@ -54,6 +54,7 @@ jobs:
             echo "context:${context}"
             context_array+=(${context})
           done <<< "${target_lines}" 
+          echo "context_array: ${context_array[@]}"
           context_json=$(path_list=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}"))
 
           echo "target_env: ${target_env}"
