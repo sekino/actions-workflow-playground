@@ -43,11 +43,11 @@ jobs:
           fi
 
           context_array=()
-          echo "${target_lines}" | while IFS= read -r line; do
+          while IFS= read -r line; do
             echo "line:${target_line}"
             echo ${target_line} | cut -d ' ' -f1 | tr -d ' '
             echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g"
-          done
+          done <<< "${target_lines}" 
           context_json=$(path_list=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}"))
 
           echo "target_env: ${target_env}"
