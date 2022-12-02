@@ -44,7 +44,7 @@ jobs:
 
           context_array=()
           for target_line in "$(echo ${target_lines})"; do
-            echo ${target_line}
+            echo "line:${target_line}"
             echo ${target_line} | cut -d ' ' -f1 | tr -d ' '
             echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g"
           done
