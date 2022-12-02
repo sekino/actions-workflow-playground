@@ -83,8 +83,8 @@ jobs:
           echo ${role-to-assume}
           echo ${atlas-api-key-id}
         env:
-          target_path: ${{ fromJson(matrix.context)[target_path] }}
-          mode: ${{ fromJson(matrix.context)[mode] }}
+          target_path: ${{ fromJson(matrix.context).target_path }}
+          mode: ${{ fromJson(matrix.context).mode }}
           env: ${{ needs.create-context-plan.outputs.env }}
           role-to-assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context-plan.outputs.env] }}
           atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context-plan.outputs.env] }}
