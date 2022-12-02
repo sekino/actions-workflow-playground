@@ -44,17 +44,11 @@ jobs:
 
           context_array=()
           while IFS= read -r target_line; do
-            echo "line:${target_line}"
             mode="$(echo ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
             target_path="$(echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g" | sed -e "s/[\r\n]\+//g" )"
-            echo "mode:${mode}"
-            echo "target_path:${target_path}"
-          
             context="{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }"
-            echo "context:${context}"
             context_array+=("${context}")
           done <<< "${target_lines}" 
-          echo "context_array: ${context_array[@]}"
           context_json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}")
 
           echo "target_env: ${target_env}"
@@ -66,6 +60,36 @@ jobs:
     outputs:
       contexts: ${{ steps.create-context.outputs.contexts }}
       env: ${{ steps.create-context.outputs.env }}
+
+  create-context-apply:
+    if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/target') }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Get latest target comment
+        id: latest-target-comment
+        uses: actions/github-script@v6.3.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            
+            // 最新のtargetコメントを使用する
+            const targetComment = comments.find(comment => {
+              comment.body.startsWith("/target")
+            })
+            
+            return targetComment.body
+
+      - name: Create context
+        shell: bash {0}
+        id: create-context
+        run: |
+          echo "${{ steps.latest-target-comment.outputs.result }}"
 
   call-plan:
     needs: create-context-plan
@@ -80,14 +104,14 @@ jobs:
           echo ${target_path}
           echo ${mode}
           echo ${env}
-          echo ${role-to-assume}
-          echo ${atlas-api-key-id}
+          echo ${role_to_assume}
+          echo ${atlas_api_key_id}
         env:
           target_path: ${{ fromJson(matrix.context).target_path }}
           mode: ${{ fromJson(matrix.context).mode }}
           env: ${{ needs.create-context-plan.outputs.env }}
-          role-to-assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context-plan.outputs.env] }}
-          atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context-plan.outputs.env] }}
+          role_to_assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context-plan.outputs.env] }}
+          atlas_api_key_id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context-plan.outputs.env] }}
 
 #  call-apply:
 #    needs: create-tf-execute-context
