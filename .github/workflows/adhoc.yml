@@ -23,20 +23,20 @@ jobs:
         shell: bash {0}
         id: create-context
         run: |
-          target_lines=$(echo -n "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
-          target_env=$(echo -n "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
+          target_lines=$(echo "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy')
+          target_env=$(echo "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
           
-          target_line_num=$(echo -n ${target_lines} | wc -l | tr -d ' ')
-          if [[ "${target_line_num}" == "0" ]]; then
+          if [[ -z "${target_lines}" ]]; then
             echo "targets is empty"
             exit 0
           fi
           
-          target_env_num=$(echo -n ${target_env} | wc -l | tr -d ' ')
-          if [[ "${target_env_num}" == "0" ]]; then
+          if [[ -z "${target_env}" ]]; then
             echo "cannot find env in target" >&2
             exit 1
           fi
+          
+          target_env_num=$(echo ${target_env} | wc -l | tr -d ' ')
           if [[ "${target_env_num}" != "1" ]]; then
             echo "two or more env in target" >&2
             exit 1
