@@ -46,7 +46,7 @@ jobs:
           while IFS= read -r target_line; do
             echo "line:${target_line}"
             mode="$(echo ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
-            target_path="$(echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g" | tr -d '\n' )"
+            target_path="$(echo ${target_line} | cut -d ' ' -f2 | tr -d ' ' | sed -e "s%/$%%g" | sed -e "s/[\r\n]\+//g" )"
             echo "mode:${mode}"
             echo "target_path:${target_path}"
           
