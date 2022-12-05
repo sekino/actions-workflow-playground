@@ -28,8 +28,6 @@ jobs:
           script: |
             const { COMMENT } = process.env
             console.log(COMMENT)
-            // comment = '${{ github.event.comment.body }}'.replace(/[\r\n]/gm, '')
-            // core.setOutput('target_comment', comment)
         env:
           COMMENT: ${{ github.event.comment.body }}
 
