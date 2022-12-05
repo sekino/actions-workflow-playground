@@ -22,12 +22,12 @@ jobs:
       - name: when PR comment
         id: when-pr-comment
         if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/target') }}
-#        refs: https://gotohayato.com/content/558/
         uses: actions/github-script@v6.3.0
         with:
           result-encoding: string
           script: |
-            core.setOutput('target_comment', ${{ github.event.comment.body }})
+            comment = '${{ github.event.comment.body }}'.replace(/[\r\n]/gm, '')
+            core.setOutput('target_comment', comment)
 
       - name: when PR merge
         id: when-pr-merge
@@ -50,7 +50,8 @@ jobs:
             })
             
             if (targetComment) {
-              core.setOutput('target_comment', targetComment.body)
+              comment=targetComment.body.replace(/[\r\n]/gm, '')
+              core.setOutput('target_comment', comment)
             } 
 
       - name: Create output
@@ -74,7 +75,6 @@ jobs:
           TARGET_COMMENT_WHEN_MERGE: ${{ steps.when-pr-merge.outputs.result }}
     outputs:
       target_comment: ${{ steps.create-output.outputs.target_comment }}
-
 
   create-context:
     needs: get-target-comment
