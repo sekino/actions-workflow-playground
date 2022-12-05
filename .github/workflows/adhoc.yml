@@ -26,9 +26,12 @@ jobs:
         with:
           result-encoding: string
           script: |
-            console.log('${{ github.event.comment.body }}')
+            const { COMMENT } = process.env
+            console.log(COMMENT)
             // comment = '${{ github.event.comment.body }}'.replace(/[\r\n]/gm, '')
             // core.setOutput('target_comment', comment)
+        env:
+          COMMENT: ${{ github.event.comment.body }}
 
       - name: when PR merge
         id: when-pr-merge
