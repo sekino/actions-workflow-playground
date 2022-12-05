@@ -86,8 +86,8 @@ jobs:
         shell: bash {0}
         id: create-context
         run: |
-          target_lines=$(echo "${TARGET_COMMENT}" | grep -E -w 'plan|plan-destroy' | sort | uniq)
-          target_env=$(echo "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
+          target_lines=$(echo -e "${TARGET_COMMENT}" | grep -E -w 'plan|plan-destroy' | sort | uniq)
+          target_env=$(echo -e "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
           
           if [[ -z "${target_lines}" ]]; then
             echo "targets is empty"
@@ -99,7 +99,7 @@ jobs:
             exit 1
           fi
           
-          target_env_num=$(echo ${target_env} | wc -l | tr -d ' ')
+          target_env_num=$(echo -e ${target_env} | wc -l | tr -d ' ')
           echo ${target_env}
           echo ${target_env_num}
           if [[ "${target_env_num}" != "1" ]]; then
