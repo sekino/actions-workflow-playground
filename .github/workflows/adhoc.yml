@@ -52,7 +52,7 @@ jobs:
             })
             
             if (targetComment) {
-              core.setOutput('target_comment', comment)
+              core.setOutput('target_comment', targetComment.body)
             } 
 
       - name: Create output
