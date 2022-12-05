@@ -23,7 +23,7 @@ jobs:
       - name: Check adhoc label
         run: echo "adhoc execute"
     env:
-      DEMO: ${{ (github.event.comment && 'hoge') || ${{ github.event.issue.number }}-fuga }}
+      DEMO: ${{ (github.event.comment && 'hoge') || format('{0}-fuga', github.event.issue.number) }}
 
   get-target-comment:
     needs: check-adhoc-label
