@@ -71,6 +71,9 @@ jobs:
     outputs:
       contexts: ${{ steps.create-context.outputs.contexts }}
       env: ${{ steps.create-context.outputs.env }}
+      plan_role: ${{ fromJson(env.PLAN_ROLE_MAP)[steps.create-context.outputs.env] }}
+      apply_role: ${{ fromJson(env.APPLY_ROLE_MAP)[steps.create-context.outputs.env] }}
+      atlas_api_key_id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[steps.create-context.outputs.env] }}
     runs-on: ubuntu-22.04
     steps:
       - name: Create context
@@ -121,13 +124,13 @@ jobs:
     if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) }}
     strategy:
       matrix:
-        state_dir: ${{fromJson(needs.create-tf-execute-context.outputs.targets)}}
+        state_dir: ${{ fromJson(needs.create-tf-execute-context.outputs.targets) }}
     uses: ./.github/workflows/plan.yml
     with:
-      role-to-assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
+      role-to-assume: ${{ needs.create-context.outputs.plan_role }}
       work-dir: ${{ fromJson(matrix.context).target_path }}
       env: ${{ needs.create-context.outputs.env }}
-      atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
+      atlas-api-key-id: ${{ needs.create-context.outputs.atlas_api_key_id }}
       adhoc_destroy_mode: ${{ fromJson(matrix.context).mode == 'plan-destroy' }}
     secrets:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -138,13 +141,13 @@ jobs:
     if: github.event.pull_request.merged == true
     strategy:
       matrix:
-        state_dir: ${{fromJson(needs.create-tf-execute-context.outputs.targets)}}
+        state_dir: ${{ fromJson(needs.create-tf-execute-context.outputs.targets) }}
     uses: ./.github/workflows/apply.yml
     with:
-      role-to-assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
+      role-to-assume: ${{ needs.create-context.outputs.apply_role }}
       work-dir: ${{ fromJson(matrix.context).target_path }}
       env: ${{ needs.create-context.outputs.env }}
-      atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
+      atlas-api-key-id: ${{ needs.create-context.outputs.atlas_api_key_id }}
     secrets:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       MODULE_TOKEN: ${{ secrets.MABOT_TOKEN }}
