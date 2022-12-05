@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: when PR comment
         id: when-pr-comment
-        if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target'))
+        if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) }}
         run: |
           echo "target_comment=${{ github.event.comment.body }}" >> $GITHUB_OUTPUT
 
