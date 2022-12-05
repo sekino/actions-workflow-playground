@@ -100,8 +100,6 @@ jobs:
           fi
           
           target_env_num=$(echo -e "${target_env}" | wc -l | tr -d ' ')
-          echo -e "${target_env}"
-          echo -e "${target_env_num}"
           if [[ "${target_env_num}" != "1" ]]; then
             echo "two or more env in target" >&2
             exit 1
