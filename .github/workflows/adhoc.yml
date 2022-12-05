@@ -140,7 +140,7 @@ jobs:
 
   call-apply:
     needs: create-context
-    if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/apply') }}
+    if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/apply') }}
     strategy:
       matrix:
         context: ${{ fromJson(needs.create-context.outputs.contexts) }}
