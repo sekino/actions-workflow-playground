@@ -13,6 +13,7 @@ env:
   APPLY_ROLE_MAP: '{ "dev": "arn:aws:iam:::role/terraformApply", "stg": "arn:aws:iam:::role/terraformApply" }'
   # bitwarden: Mongo Atlas API Key terraform
   ATLAS_API_KEY_ID_MAP: '{ "dev": "6193", "stg": "619" }'
+  FLAG: 'true'
 
 jobs:
   check-adhoc-label:
@@ -21,6 +22,8 @@ jobs:
     steps:
       - name: Check adhoc label
         run: echo "adhoc execute"
+    env:
+      DEMO: ${{ (env.FLAG  == 'false' && 'hoge') || env.FLAG-'fuga' }}
 
   get-target-comment:
     needs: check-adhoc-label
