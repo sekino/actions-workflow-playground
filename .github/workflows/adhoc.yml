@@ -16,7 +16,7 @@ env:
 
 jobs:
   get-target-comment:
-    if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) || startsWith(github.event.comment.body, '/apply') }}
+    if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) || github.event.pull_request.merged == true }}
     runs-on: ubuntu-22.04
     steps:
       - name: when PR comment
@@ -33,7 +33,7 @@ jobs:
 
       - name: when PR merge
         id: when-pr-merge
-        if: startsWith(github.event.comment.body, '/apply')
+        if: github.event.pull_request.merged == true
         uses: actions/github-script@v6.3.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -48,7 +48,7 @@ jobs:
             
             // 最新のtargetコメントを使用する
             const targetComment = comments.reverse().find(comment => {
-              return comment.body.startsWith("/apply")
+              return comment.body.startsWith("/target")
             })
             
             if (targetComment) {
@@ -151,7 +151,7 @@ jobs:
 
   call-apply:
     needs: create-context
-    if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/apply') }}
+    if: github.event.pull_request.merged == true
     strategy:
       matrix:
         context: ${{ fromJson(needs.create-context.outputs.contexts) }}
