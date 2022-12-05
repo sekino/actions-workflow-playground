@@ -73,7 +73,7 @@ jobs:
             }
         env:
           TARGET_COMMENT_WHEN_COMMENT: ${{ steps.when-pr-comment.outputs.target_comment }}
-          TARGET_COMMENT_WHEN_MERGE: ${{ steps.when-pr-merge.outputs.result }}
+          TARGET_COMMENT_WHEN_MERGE: ${{ steps.when-pr-merge.outputs.target_comment }}
     outputs:
       target_comment: ${{ steps.create-output.outputs.target_comment }}
 
