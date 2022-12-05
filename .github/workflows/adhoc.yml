@@ -15,11 +15,19 @@ env:
   ATLAS_API_KEY_ID_MAP: '{ "dev": "123456", "stg": "78910" }'
 
 jobs:
+  check-adhoc-label:
+    if: ${{ contains(github.event.issue.labels.*.name, 'adhoc execute') || contains(github.event.pull_request.labels.*.name, 'adhoc execute') }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check adhoc label
+        run: echo "adhoc execute"
+
   get-target-comment:
+    needs: check-adhoc-label
     if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) || github.event.pull_request.merged == true }}
     runs-on: ubuntu-22.04
     steps:
-      - name: when PR comment
+      - name: When PR comment
         id: when-pr-comment
         if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/target') }}
         uses: actions/github-script@v6.3.0
@@ -31,7 +39,7 @@ jobs:
         env:
           COMMENT: ${{ github.event.comment.body }}
 
-      - name: when PR merge
+      - name: When PR merge
         id: when-pr-merge
         if: github.event.pull_request.merged == true
         uses: actions/github-script@v6.3.0
