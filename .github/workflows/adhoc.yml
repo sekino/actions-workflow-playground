@@ -27,7 +27,7 @@ jobs:
           result-encoding: string
           script: |
             const { COMMENT } = process.env
-            console.log(COMMENT)
+            core.setOutput('target_comment', COMMENT)
         env:
           COMMENT: ${{ github.event.comment.body }}
 
@@ -52,7 +52,6 @@ jobs:
             })
             
             if (targetComment) {
-              comment=targetComment.body.replace(/[\r\n]/gm, '')
               core.setOutput('target_comment', comment)
             } 
 
