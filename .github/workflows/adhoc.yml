@@ -21,9 +21,13 @@ jobs:
     steps:
       - name: when PR comment
         id: when-pr-comment
-        if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) }}
-        run: |
-          echo "target_comment=${{ github.event.comment.body }}" >> $GITHUB_OUTPUT
+        if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/target') }}
+#        refs: https://gotohayato.com/content/558/
+        uses: actions/github-script@v6.3.0
+        with:
+          result-encoding: string
+          script: |
+            core.setOutput('target_comment', ${{ github.event.comment.body }})
 
       - name: when PR merge
         id: when-pr-merge
@@ -45,20 +49,26 @@ jobs:
               return comment.body.startsWith("bbb")
             })
             
-            if (targetComment) return targetComment.body
+            if (targetComment) {
+              core.setOutput('target_comment', targetComment.body)
+            } 
 
       - name: Create output
         id: create-output
-        run: |
-          if [[ ! -z "${TARGET_COMMENT_WHEN_COMMENT}"]]; then
-            echo "target_comment=${TARGET_COMMENT_WHEN_COMMENT}" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          if [[ "${TARGET_COMMENT_WHEN_MERGE}" != "undefined" ]]; then
-            echo "target_comment=${TARGET_COMMENT_WHEN_MERGE}" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+        uses: actions/github-script@v6.3.0
+        with:
+          result-encoding: string
+          script: |
+            const { TARGET_COMMENT_WHEN_COMMENT, TARGET_COMMENT_WHEN_MERGE } = process.env
+            if (TARGET_COMMENT_WHEN_COMMENT) {
+              core.setOutput('target_comment', TARGET_COMMENT_WHEN_COMMENT)
+              return
+            }
+            
+            if (TARGET_COMMENT_WHEN_MERGE) {
+              core.setOutput('target_comment', TARGET_COMMENT_WHEN_MERGE)
+              return
+            }
         env:
           TARGET_COMMENT_WHEN_COMMENT: ${{ steps.when-pr-comment.outputs.target_comment }}
           TARGET_COMMENT_WHEN_MERGE: ${{ steps.when-pr-merge.outputs.result }}
