@@ -1,0 +1,196 @@
+name: terraform apply workflow
+
+on:
+  workflow_call:
+    inputs:
+      role-to-assume:
+        required: true
+        type: string
+      work-dir:
+        required: true
+        type: string
+      env:
+        required: true
+        type: string
+      atlas-api-key-id:
+        required: true
+        type: string
+        description: 'Atlas API KeyのID.これは機密情報ではありません'
+      remove_state:
+        type: boolean
+        default: false
+
+    secrets:
+      SLACK_BOT_TOKEN:
+        required: true
+      MODULE_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  terraform-apply:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3.0.2
+
+    - name: Set Config for Module
+      run: git config --global url."https://${TOKEN}:x-oauth-basic@github.com/MatchingAgent".insteadOf "ssh://git@github.com/MatchingAgent"
+      env:
+        TOKEN: ${{ secrets.MODULE_TOKEN }}
+
+    - name: Get terraform version from .tool-versions
+      id: get-terraform-version
+      run: |
+        TF_VERSION=$(cat ./env/${ENV}/.tool-versions | awk -F' ' '{ if($1 == "terraform") print $2 }')
+        echo "TF_VERSION=${TF_VERSION}" >> $GITHUB_OUTPUT
+      env:
+        ENV: ${{ inputs.env }}
+
+    - name: Setup terraform
+      uses: hashicorp/setup-terraform@v2.0.0
+      with:
+        terraform_version: ${{ steps.get-terraform-version.outputs.TF_VERSION }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: ${{ inputs.role-to-assume }}
+        aws-region: ap-northeast-1
+
+    - name: Create working directory when remove_state
+      if: inputs.remove_state
+      run: mkdir -p ${{ inputs.work-dir }}
+
+    - name: Create artifact name prefix
+      id: create-artifact-prefix
+      run: |
+        prefix=$(echo ${{ inputs.work-dir }} | tr '/' '-')
+        echo "PREFIX=${prefix}" >> $GITHUB_OUTPUT
+
+    - name: Download versions file from artifact
+      if: inputs.remove_state
+      uses: dawidd6/action-download-artifact@v2.24.2
+      with:
+        workflow: ${{ inputs.env }}-plan.yml
+        workflow_conclusion: success
+        pr: ${{ github.event.pull_request.number || github.event.issue.number }}
+        name: ${{ steps.create-artifact-prefix.outputs.PREFIX }}-versions.tf
+        check_artifacts: true
+        search_artifacts: true
+        path: ${{ inputs.work-dir }}
+
+
+    - name: Run terraform init
+      id: init
+      run: terraform init
+      working-directory: ${{ inputs.work-dir }}
+
+    - name: Install Public IP Lib
+      id: gip
+      uses: haythem/public-ip@v1.3
+
+      # refs: https://www.notion.so/cyberagent/terraform-Atlas-API-Key-Lambda-018fcb08ee82487fbe364a391220e294
+    - name: Create atlas API key accessList entry
+      run: |
+        aws lambda invoke --function-name ${{ inputs.env }}-control-atlas-api-key-access-list \
+        --region ap-northeast-1 --log-type Tail \
+        --cli-binary-format raw-in-base64-out --payload '{ "mode": "create", "apiKeyId": "${{ inputs.atlas-api-key-id }}", "ip": "${{ steps.gip.outputs.ipv4 }}" }' \
+        --query 'LogResult' response.json | tr -d '"' | base64 -d
+
+    - name: Download plan file from artifact
+      uses: dawidd6/action-download-artifact@v2.24.2
+      with:
+        workflow: ${{ inputs.env }}-plan.yml
+        workflow_conclusion: success
+        pr: ${{ github.event.pull_request.number || github.event.issue.number }}
+        name: ${{ steps.create-artifact-prefix.outputs.PREFIX }}-tfplan
+        check_artifacts: true
+        search_artifacts: true
+        path: ${{ inputs.work-dir }}
+
+    - name: Show terraform plan
+      id: show
+      run: |
+        terraform show -no-color tfplan
+      working-directory: ${{ inputs.work-dir }}
+
+    - name: Run terraform apply
+      id: apply
+      run: |
+        terraform apply -auto-approve -no-color tfplan
+      working-directory: ${{ inputs.work-dir }}
+
+    - name: Remove atlas API key accessList entry
+      if: ${{ always() }}
+      run: |
+        aws lambda invoke --function-name ${{ inputs.env }}-control-atlas-api-key-access-list \
+        --region ap-northeast-1 --log-type Tail \
+        --cli-binary-format raw-in-base64-out --payload '{ "mode": "remove", "apiKeyId": "${{ inputs.atlas-api-key-id }}", "ip": "${{ steps.gip.outputs.ipv4 }}" }' \
+        --query 'LogResult' response.json | tr -d '"' | base64 -d
+
+    - name: Post Apply to GitHub PR
+      if: steps.apply.outcome == 'success'
+      uses: mshick/add-pr-comment@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        repo-token-user-login: 'github-actions[bot]'
+        message: |
+          #### Applying success **${{ inputs.work-dir }}** 📝
+
+          Action: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          *Pusher: @${{ github.actor }}, Action: `${{ github.event_name }}`, Workspace Name: `${{ inputs.env }}`, State: `${{ inputs.work-dir }}`, Workflow: `${{ github.workflow }}`*
+
+    - name: Post Apply Failure to GitHub PR
+      if: steps.apply.outcome == 'failure'
+      uses: mshick/add-pr-comment@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        repo-token-user-login: 'github-actions[bot]'
+        message: |
+          #### Apply failed for **${{ inputs.work-dir }}** ❌
+
+          ```
+          ${{ steps.apply.outputs.stderr }}
+          ```
+
+          *Pusher: @${{ github.actor }}, Action: `${{ github.event_name }}`, Workspace Name: `${{ inputs.env }}`, State: `${{ inputs.work-dir }}`, Workflow: `${{ github.workflow }}`*
+
+    - name: Generate slack payload json
+      uses: cuchi/jinja2-action@v1.2.0
+      if: always()
+      with:
+        template: ./.github/workflows/slack_notification_payload.json.j2
+        output_file: ./.github/workflows/slack_notification_payload.json
+        strict: true
+        variables: |
+          env=${{ inputs.env }}
+          mode=apply
+          job_status=${{ steps.apply.outcome }}
+          action_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          workflow_name=${{ github.workflow }}
+          state=${{ inputs.work-dir }}
+          pr_url=${{ github.event.pull_request.html_url || github.event.issue.html_url }}
+          author_url=https://github.com/${{ github.event.sender.login }}
+          author_name=${{ github.event.sender.login }}
+
+    - name: Notification plan failure to slack
+      uses: slackapi/slack-github-action@v1.23.0
+      if: always()
+      with:
+        channel-id: '#server_review_request_infra'
+        payload-file-path: "./.github/workflows/slack_notification_payload.json"
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+    - name: Unset Config
+      if: always()
+      run: git config --unset --global url."https://${TOKEN}:x-oauth-basic@github.com/MatchingAgent".insteadOf
+      env:
+        TOKEN: ${{ secrets.MODULE_TOKEN }}

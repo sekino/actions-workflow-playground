@@ -9,10 +9,10 @@ on:
     types: [closed]
 
 env:
-  PLAN_ROLE_MAP: '{ "dev": "role/terraformPlan", "stg": "role/terraformPlan" }'
-  APPLY_ROLE_MAP: '{ "dev": "role/terraformApply", "stg": "role/terraformApply" }'
+  PLAN_ROLE_MAP: '{ "dev": "arn:aws:iam:::role/terraformPlan", "stg": "arn:aws:iam:::role/terraformPlan" }'
+  APPLY_ROLE_MAP: '{ "dev": "arn:aws:iam:::role/terraformApply", "stg": "arn:aws:iam:::role/terraformApply" }'
   # bitwarden: Mongo Atlas API Key terraform
-  ATLAS_API_KEY_ID_MAP: '{ "dev": "123456", "stg": "78910" }'
+  ATLAS_API_KEY_ID_MAP: '{ "dev": "6193", "stg": "619" }'
 
 jobs:
   check-adhoc-label:
@@ -25,6 +25,8 @@ jobs:
   get-target-comment:
     needs: check-adhoc-label
     if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) || github.event.pull_request.merged == true }}
+    outputs:
+      target_comment: ${{ steps.when-pr-comment.outputs.target_comment || steps.when-pr-merge.outputs.target_comment }}
     runs-on: ubuntu-22.04
     steps:
       - name: When PR comment
@@ -63,31 +65,12 @@ jobs:
               core.setOutput('target_comment', targetComment.body)
             } 
 
-      - name: Create output
-        id: create-output
-        uses: actions/github-script@v6.3.0
-        with:
-          result-encoding: string
-          script: |
-            const { TARGET_COMMENT_WHEN_COMMENT, TARGET_COMMENT_WHEN_MERGE } = process.env
-            if (TARGET_COMMENT_WHEN_COMMENT) {
-              core.setOutput('target_comment', TARGET_COMMENT_WHEN_COMMENT)
-              return
-            }
-            
-            if (TARGET_COMMENT_WHEN_MERGE) {
-              core.setOutput('target_comment', TARGET_COMMENT_WHEN_MERGE)
-              return
-            }
-        env:
-          TARGET_COMMENT_WHEN_COMMENT: ${{ steps.when-pr-comment.outputs.target_comment }}
-          TARGET_COMMENT_WHEN_MERGE: ${{ steps.when-pr-merge.outputs.target_comment }}
-    outputs:
-      target_comment: ${{ steps.create-output.outputs.target_comment }}
-
   create-context:
     needs: get-target-comment
     if: ${{ needs.get-target-comment.outputs.target_comment }}
+    outputs:
+      contexts: ${{ steps.create-context.outputs.contexts }}
+      env: ${{ steps.create-context.outputs.env }}
     runs-on: ubuntu-22.04
     steps:
       - name: Create context
@@ -113,6 +96,7 @@ jobs:
             exit 1
           fi
 
+          : # { "target_path": <path>, "mode": <plan or plan-destroy> } の配列を組み立てる
           context_array=()
           while IFS= read -r target_line; do
             mode="$(echo ${target_line} | cut -d ' ' -f1 | tr -d ' ')"
@@ -120,6 +104,7 @@ jobs:
             context="{ \"target_path\": \"${target_path}\", \"mode\": \"${mode}\" }"
             context_array+=("${context}")
           done <<< "${target_lines}" 
+          : # ref: https://stackoverflow.com/questions/26808855/how-to-format-a-bash-array-as-a-json-array
           context_json=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${context_array[@]}")
 
           echo "target_env: ${target_env}"
@@ -131,51 +116,35 @@ jobs:
         env:
           TARGET_COMMENT: ${{ needs.get-target-comment.outputs.target_comment }}
 
-    outputs:
-      contexts: ${{ steps.create-context.outputs.contexts }}
-      env: ${{ steps.create-context.outputs.env }}
-
   call-plan:
     needs: create-context
     if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) }}
     strategy:
       matrix:
-        context: ${{ fromJson(needs.create-context.outputs.contexts) }}
-    runs-on: ubuntu-22.04
-    steps:
-      - name: demo call plan
-        run: |
-          echo ${target_path}
-          echo ${mode}
-          echo ${env}
-          echo ${role_to_assume}
-          echo ${atlas_api_key_id}
-        env:
-          target_path: ${{ fromJson(matrix.context).target_path }}
-          mode: ${{ fromJson(matrix.context).mode }}
-          env: ${{ needs.create-context.outputs.env }}
-          role_to_assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
-          atlas_api_key_id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
+        state_dir: ${{fromJson(needs.create-tf-execute-context.outputs.targets)}}
+    uses: ./.github/workflows/plan.yml
+    with:
+      role-to-assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
+      work-dir: ${{ fromJson(matrix.context).target_path }}
+      env: ${{ needs.create-context.outputs.env }}
+      atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
+      adhoc_destroy_mode: ${{ fromJson(matrix.context).mode == 'plan-destroy' }}
+    secrets:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      MODULE_TOKEN: ${{ secrets.MABOT_TOKEN }}
 
   call-apply:
     needs: create-context
     if: github.event.pull_request.merged == true
     strategy:
       matrix:
-        context: ${{ fromJson(needs.create-context.outputs.contexts) }}
-    runs-on: ubuntu-22.04
-    steps:
-      - name: demo call plan
-        run: |
-          echo ${target_path}
-          echo ${mode}
-          echo ${env}
-          echo ${role_to_assume}
-          echo ${atlas_api_key_id}
-        env:
-          target_path: ${{ fromJson(matrix.context).target_path }}
-          mode: ${{ fromJson(matrix.context).mode }}
-          env: ${{ needs.create-context.outputs.env }}
-          role_to_assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
-          atlas_api_key_id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
-
+        state_dir: ${{fromJson(needs.create-tf-execute-context.outputs.targets)}}
+    uses: ./.github/workflows/apply.yml
+    with:
+      role-to-assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
+      work-dir: ${{ fromJson(matrix.context).target_path }}
+      env: ${{ needs.create-context.outputs.env }}
+      atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
+    secrets:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      MODULE_TOKEN: ${{ secrets.MABOT_TOKEN }}
