@@ -15,15 +15,67 @@ env:
   ATLAS_API_KEY_ID_MAP: '{ "dev": "123456", "stg": "78910" }'
 
 jobs:
-  create-context-plan:
-    if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/target') }}
+  get-target-comment:
+    if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) || startsWith(github.event.comment.body, '/apply') }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: when PR comment
+        id: when-pr-comment
+        if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target'))
+        run: |
+          echo "target_comment=${{ github.event.comment.body }}" >> $GITHUB_OUTPUT
+
+      - name: when PR merge
+        id: when-pr-merge
+        if: startsWith(github.event.comment.body, '/apply')
+        uses: actions/github-script@v6.3.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            })
+            
+            // 最新のtargetコメントを使用する
+            const targetComment = comments.reverse().find(comment => {
+              return comment.body.startsWith("bbb")
+            })
+            
+            if (targetComment) return targetComment.body
+
+      - name: Create output
+        id: create-output
+        run: |
+          if [[ ! -z "${TARGET_COMMENT_WHEN_COMMENT}"]]; then
+            echo "target_comment=${TARGET_COMMENT_WHEN_COMMENT}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          if [[ "${TARGET_COMMENT_WHEN_MERGE}" != "undefined" ]]; then
+            echo "target_comment=${TARGET_COMMENT_WHEN_MERGE}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+        env:
+          TARGET_COMMENT_WHEN_COMMENT: ${{ steps.when-pr-comment.outputs.target_comment }}
+          TARGET_COMMENT_WHEN_MERGE: ${{ steps.when-pr-merge.outputs.result }}
+    outputs:
+      target_comment: ${{ steps.create-output.outputs.target_comment }}
+
+
+  create-context:
+    needs: get-target-comment
+    if: ${{ needs.get-target-comment.outputs.target_comment }}
     runs-on: ubuntu-22.04
     steps:
       - name: Create context
         shell: bash {0}
         id: create-context
         run: |
-          target_lines=$(echo "${{ github.event.comment.body }}" | grep -E -w 'plan|plan-destroy' | sort | uniq)
+          target_lines=$(echo "${TARGET_COMMENT}" | grep -E -w 'plan|plan-destroy' | sort | uniq)
           target_env=$(echo "${target_lines}" | grep -E -ow 'dev|stg|prd|sbg' | sort | uniq)
           
           if [[ -z "${target_lines}" ]]; then
@@ -57,50 +109,22 @@ jobs:
 
           echo "contexts=${context_json}" >> $GITHUB_OUTPUT
           echo "env=${target_env}" >> $GITHUB_OUTPUT
+        env:
+          TARGET_COMMENT: ${{ needs.get-target-comment.outputs.target_comment }}
+
     outputs:
       contexts: ${{ steps.create-context.outputs.contexts }}
       env: ${{ steps.create-context.outputs.env }}
 
-  create-context-apply:
-    if: ${{ github.event.comment.body && startsWith(github.event.comment.body, '/target') }}
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Get latest target comment
-        id: latest-target-comment
-        uses: actions/github-script@v6.3.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          result-encoding: string
-          script: |
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              per_page: 100,
-            })
-            
-            // 最新のtargetコメントを使用する
-            const targetComment = comments.reverse().find(comment => {
-              return comment.body.startsWith("bbb")
-            })
-            
-            if (targetComment) return targetComment.body
-
-      - name: Create context
-        shell: bash {0}
-        id: create-context
-        run: |
-          echo "${{ steps.latest-target-comment.outputs.result }}"
-
   call-plan:
-    needs: create-context-plan
+    needs: create-context
+    if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/target')) }}
     strategy:
       matrix:
-        context: ${{ fromJson(needs.create-context-plan.outputs.contexts) }}
-    if: ${{ needs.create-context-plan.outputs.contexts }}
+        context: ${{ fromJson(needs.create-context.outputs.contexts) }}
     runs-on: ubuntu-22.04
     steps:
-      - name: demo
+      - name: demo call plan
         run: |
           echo ${target_path}
           echo ${mode}
@@ -110,22 +134,29 @@ jobs:
         env:
           target_path: ${{ fromJson(matrix.context).target_path }}
           mode: ${{ fromJson(matrix.context).mode }}
-          env: ${{ needs.create-context-plan.outputs.env }}
-          role_to_assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context-plan.outputs.env] }}
-          atlas_api_key_id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context-plan.outputs.env] }}
+          env: ${{ needs.create-context.outputs.env }}
+          role_to_assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
+          atlas_api_key_id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
 
-#  call-apply:
-#    needs: create-tf-execute-context
-#    if: ${{ github.event.pull_request.merged == true && needs.create-tf-execute-context.outputs.targets && needs.create-tf-execute-context.outputs.targets != '[]' }}
-#    strategy:
-#      matrix:
-#        state_dir: ${{fromJson(needs.create-tf-execute-context.outputs.targets)}}
-#    uses: ./.github/workflows/apply.yml
-#    with:
-#      role-to-assume: ${{ fromJson(env.APPLY_ROLE_MAP)[needs.create-tf-execute-context.outputs.env] }}
-#      work-dir: ${{ matrix.state_dir }}
-#      env: ${{ needs.create-tf-execute-context.outputs.env }}
-#      atlas-api-key-id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-tf-execute-context.outputs.env] }}
-#    secrets:
-#      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-#      MODULE_TOKEN: ${{ secrets.MABOT_TOKEN }}
+  call-apply:
+    needs: create-context
+    if: ${{ (github.event.comment.body && startsWith(github.event.comment.body, '/apply') }}
+    strategy:
+      matrix:
+        context: ${{ fromJson(needs.create-context.outputs.contexts) }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: demo call plan
+        run: |
+          echo ${target_path}
+          echo ${mode}
+          echo ${env}
+          echo ${role_to_assume}
+          echo ${atlas_api_key_id}
+        env:
+          target_path: ${{ fromJson(matrix.context).target_path }}
+          mode: ${{ fromJson(matrix.context).mode }}
+          env: ${{ needs.create-context.outputs.env }}
+          role_to_assume: ${{ fromJson(env.PLAN_ROLE_MAP)[needs.create-context.outputs.env] }}
+          atlas_api_key_id: ${{ fromJson(env.ATLAS_API_KEY_ID_MAP)[needs.create-context.outputs.env] }}
+
