@@ -110,63 +110,63 @@ jobs:
                       break
                   }
               }
-              //
-              //if (!runID) {
-              //    core.setFailed('no matching workflow run found with any artifacts?')
-              //    return
-              //}
-              //
-              //let artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
-              //    owner: owner,
-              //    repo: repo,
-              //    run_id: runID,
-              //})
-              //
-              //filtered = artifacts.filter((artifact) => {
-              //    return artifact.name == name
-              //})
-              //if (filtered.length == 0) {
-              //    core.info(`==> (not found) Artifact: ${name}`)
-              //    core.info('==> Found the following artifacts instead:')
-              //    for (const artifact of artifacts) {
-              //        core.info(`\t==> (found) Artifact: ${artifact.name}`)
-              //    }
-              //}
-              //artifacts = filtered
-              //core.setOutput("artifacts", artifacts)
-              //
-              //if (artifacts.length == 0) {
-              //    core.setFailed('no matching workflow run found with any artifacts?')
-              //    return
-              //}
-              //
-              //core.setOutput("found_artifact", true)
-              //
-              //for (const artifact of artifacts) {
-              //    core.info(`==> Artifact: ${artifact.id}`)
-              //    core.info(`==> Downloading: ${artifact.name}.zip`)
-              //
-              //    let zip
-              //    try {
-              //        zip = await github.rest.actions.downloadArtifact({
-              //            owner: owner,
-              //            repo: repo,
-              //            artifact_id: artifact.id,
-              //            archive_format: "zip",
-              //        })
-              //    } catch (error) {
-              //        if (error.message === "Artifact has expired") {
-              //            core.setFailed('no downloadable artifacts found (expired)')
-              //            return 
-              //        } else {
-              //            throw new Error(error.message)
-              //        }
-              //    }
-              //
-              //
-              //    io.mkdirP(path)
-              //    fs.writeFileSync(`${pathname.join(path, artifact.name)}.zip`, Buffer.from(zip.data), 'binary')                  
-              //}
+              
+              if (!runID) {
+                  core.setFailed('no matching workflow run found with any artifacts?')
+                  return
+              }
+              
+              let artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                  owner: owner,
+                  repo: repo,
+                  run_id: runID,
+              })
+              
+              filtered = artifacts.filter((artifact) => {
+                  return artifact.name == name
+              })
+              if (filtered.length == 0) {
+                  core.info(`==> (not found) Artifact: ${name}`)
+                  core.info('==> Found the following artifacts instead:')
+                  for (const artifact of artifacts) {
+                      core.info(`\t==> (found) Artifact: ${artifact.name}`)
+                  }
+              }
+              artifacts = filtered
+              core.setOutput("artifacts", artifacts)
+              
+              if (artifacts.length == 0) {
+                  core.setFailed('no matching workflow run found with any artifacts?')
+                  return
+              }
+              
+              core.setOutput("found_artifact", true)
+              
+              for (const artifact of artifacts) {
+                  core.info(`==> Artifact: ${artifact.id}`)
+                  core.info(`==> Downloading: ${artifact.name}.zip`)
+              
+                  let zip
+                  try {
+                      zip = await github.rest.actions.downloadArtifact({
+                          owner: owner,
+                          repo: repo,
+                          artifact_id: artifact.id,
+                          archive_format: "zip",
+                      })
+                  } catch (error) {
+                      if (error.message === "Artifact has expired") {
+                          core.setFailed('no downloadable artifacts found (expired)')
+                          return 
+                      } else {
+                          throw new Error(error.message)
+                      }
+                  }
+              
+              
+                  io.mkdirP(path)
+                  fs.writeFileSync(`${pathname.join(path, artifact.name)}.zip`, Buffer.from(zip.data), 'binary')                  
+              }
             } catch (error) {
                 core.setOutput("found_artifact", false)
                 core.setOutput("error_message", error.message)
