@@ -74,7 +74,6 @@ jobs:
                   repo: repo,
                   workflow_id: workflow,
                   ...(branch ? { branch } : {}),
-                  ...(event ? { event } : {}),
               }
               )) {
                   for (const run of runs.data) {
