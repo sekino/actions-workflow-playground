@@ -55,7 +55,7 @@ jobs:
               core.info(`==> branch: ${branch}`)
             
               let commit
-              if (pr) {
+              if (pr || pr === 0) {
                   const pull = await github.rest.pulls.get({
                       owner: owner,
                       repo: repo,
