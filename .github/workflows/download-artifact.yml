@@ -44,7 +44,7 @@ jobs:
               const name = '${{ inputs.name }}'
               const workflow = '${{ inputs.workflow }}'
               const pr = ${{ inputs.pr }}
-              const branch = '${{ inputs.branch }}'
+              let branch = '${{ inputs.branch }}'
               const path = '${{ inputs.path }}'
             
               core.info(`==> Repository: ${owner}/${repo}`)
