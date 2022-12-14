@@ -1,0 +1,21 @@
+name: dev terraform plan
+
+on:
+  pull_request:
+
+jobs:
+  upload-artifact:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Create file
+        run: |
+          touch test.file
+          echo "test" > test.file
+
+      - name: Upload
+        uses: actions/upload-artifact@v3.1.1
+        with:
+          name: test
+          path: test.file
+          retention-days: 5
+          if-no-files-found: error

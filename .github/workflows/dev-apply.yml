@@ -1,0 +1,17 @@
+name: dev terraform apply
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  download-artifact:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/download-artifact.yml
+    with:
+      workflow: dev-plan.yml
+      name: test
+      pr: ${{ github.event.pull_request.number }}
+      path: ./
