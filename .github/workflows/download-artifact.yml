@@ -40,11 +40,11 @@ jobs:
             const fs = require('fs')
             const pathname = require('path')
             try {              
-              const [owner, repo] = core.getInput("repo", { required: true }).split("/")
-              const name = core.getInput("name")
-              const workflow = core.getInput("workflow")
-              const pr = core.getInput("pr")
-              const branch = core.getInput("branch")
+              const [owner, repo] = '${{ inputs.repo }}'.split("/")
+              const name = '${{ inputs.name }}'
+              const workflow = '${{ inputs.workflow }}'
+              const pr = '${{ inputs.pr }}'
+              const branch = '${{ inputs.branch }}'
             
               core.info(`==> Repository: ${owner}/${repo}`)
               core.info(`==> Artifact name: ${name}`)
