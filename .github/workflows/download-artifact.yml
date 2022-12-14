@@ -69,7 +69,7 @@ jobs:
                   core.info(`==> Branch: ${branch}`)
               }
               
-              for await (const runs of client.paginate.iterator(github.rest.actions.listWorkflowRuns, {
+              for await (const runs of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
                   owner: owner,
                   repo: repo,
                   workflow_id: workflow,
@@ -117,7 +117,7 @@ jobs:
               //    return
               //}
               //
-              //let artifacts = await client.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              //let artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
               //    owner: owner,
               //    repo: repo,
               //    run_id: runID,
