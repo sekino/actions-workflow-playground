@@ -61,7 +61,7 @@ jobs:
                       repo: repo,
                       pull_number: pr,
                   })
-                  const commit = pull.data.head.sha
+                  commit = pull.data.head.sha
               }
               
               if (commit) {
