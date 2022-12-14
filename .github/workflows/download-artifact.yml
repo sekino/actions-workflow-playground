@@ -52,6 +52,7 @@ jobs:
               core.info(`==> Local path: ${path}`)
               core.info(`==> Workflow name: ${workflow}`)
               core.info(`==> PR: ${pr}`)
+              core.info(`==> branch: ${branch}`)
             
               let commit
               if (pr) {
