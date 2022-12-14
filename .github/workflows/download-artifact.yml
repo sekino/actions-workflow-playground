@@ -53,12 +53,15 @@ jobs:
               core.info(`==> Workflow name: ${workflow}`)
               core.info(`==> PR: ${pr}`)
             
-              const pull = await github.rest.pulls.get({
-                  owner: owner,
-                  repo: repo,
-                  pull_number: pr,
-              })
-              const commit = pull.data.head.sha
+              let commit
+              if (pr) {
+                  const pull = await github.rest.pulls.get({
+                      owner: owner,
+                      repo: repo,
+                      pull_number: pr,
+                  })
+                  const commit = pull.data.head.sha
+              }
               
               if (commit) {
                   core.info(`==> Commit: ${commit}`)
