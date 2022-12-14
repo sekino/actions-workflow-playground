@@ -174,4 +174,5 @@ jobs:
             }
       - name: Unzip
         run: |
+          unzip ${{ inputs.name }}.zip
           ls 
