@@ -4,6 +4,7 @@ on:
   workflow_call:
     inputs:
       repo:
+        type: string
         required: false
         default: ${{ github.repository }}
       workflow:
