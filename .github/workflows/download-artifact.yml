@@ -43,7 +43,7 @@ jobs:
               const [owner, repo] = '${{ inputs.repo }}'.split("/")
               const name = '${{ inputs.name }}'
               const workflow = '${{ inputs.workflow }}'
-              const pr = '${{ inputs.pr }}'
+              const pr = ${{ inputs.pr }}
               const branch = '${{ inputs.branch }}'
               const path = '${{ inputs.path }}'
             
