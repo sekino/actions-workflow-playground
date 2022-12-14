@@ -9,5 +9,5 @@ jobs:
     with:
       workflow: dev-plan.yml
       name: test
-      pr: 5
+      branch: artifact-test
       path: ./

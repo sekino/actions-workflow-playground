@@ -35,7 +35,7 @@ jobs:
         uses: actions/github-script@v6.3.3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          //          refs: https://github.com/dawidd6/action-download-artifact/blob/master/main.js
+#          refs: https://github.com/dawidd6/action-download-artifact/blob/master/main.js
           script: |
             const fs = require('fs')
             const pathname = require('path')
