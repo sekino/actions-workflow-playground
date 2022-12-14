@@ -81,7 +81,7 @@ jobs:
                       if (commit && run.head_sha != commit) {
                           continue
                       }
-                      if ('success' != run.conclusion && 'success' != run.status)) {
+                      if ('success' != run.conclusion && 'success' != run.status) {
                           continue
                       }
               
